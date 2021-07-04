@@ -1,4 +1,4 @@
-from .views import FragmentableViewMixin
+from .views import FragmentableTemplateViewMixin
 
 
-__all__ = ['FragmentableViewMixin']
+__all__ = ['FragmentableTemplateViewMixin']
