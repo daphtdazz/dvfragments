@@ -2,20 +2,25 @@ from django import template
 from django.template.base import FilterExpression, Parser
 from django.template.loader_tags import IncludeNode
 
+from ..utils import add_fragment_id
+
+
 register = template.Library()
 
 
 class FragmentNode(IncludeNode):
-    def __init__(self, fragment_name, *, extra_context, isolated_context):
-        self.fragment_name = fragment_name
+    def __init__(self, fragment_id, *, extra_context, isolated_context):
+        self.fragment_id = fragment_id
 
         # template name is deferred
         super().__init__(None, extra_context=extra_context, isolated_context=isolated_context)
 
     def render(self, context):
-        token = context['_dvfragments'][self.fragment_name]
+        token = context['_dvfragments'][self.fragment_id]
         self.template = FilterExpression(f'"{token}"', Parser(''))
-        return super().render(context)
+        rendered = super().render(context)
+        rendered2 = add_fragment_id(rendered, self.fragment_id)
+        return rendered2
 
 
 @register.tag(name='fragment')

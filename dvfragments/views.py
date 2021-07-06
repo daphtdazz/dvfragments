@@ -1,13 +1,12 @@
-import re
 from typing import Iterable, Tuple
 
 from django.conf import settings
 from django.template.response import TemplateResponse
 
+from .utils import add_fragment_id
+
 
 URL_FRAGMENT_QUERY_KEY = 'fragment'
-
-FIRST_ELEMENT_RE = re.compile(r'^(\s*<\s*\w+\s)')
 
 
 class ConcatenatedTemplatesResponse(TemplateResponse):
@@ -23,11 +22,11 @@ class ConcatenatedTemplatesResponse(TemplateResponse):
     def rendered_content(self):
         context = self.resolve_context(self.context_data)
         contents = []
-        for fragment_name, template_names in self.templates_options:
+        for fragment_id, template_names in self.templates_options:
             template = self.resolve_template(template_names)
             rendered = template.render(context, self._request)
 
-            rendered2 = FIRST_ELEMENT_RE.sub(rf'\1x-dvfragment-id={fragment_name} ', rendered)
+            rendered2 = add_fragment_id(rendered, fragment_id)
             contents.append(rendered2)
 
         return '\n'.join(contents)
