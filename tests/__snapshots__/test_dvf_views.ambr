@@ -1,0 +1,48 @@
+# name: test_dvf_view
+  '
+  
+  <!doctype html>
+  <html>
+      <head>
+          <title>View 1</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+      </head>
+      <body>
+          <h1>Hello world from view 1</h1>
+          
+          
+          <p x-dvfragment-id=if-frag >Condition is false</p>
+          
+          
+      </body>
+  </html>
+  
+  '
+---
+# name: test_dvf_view.1
+  '
+  
+          
+          <p x-dvfragment-id=if-frag >Condition is false</p>
+          
+          
+  '
+---
+# name: test_dvf_view.2
+  '
+  
+          
+          <p x-dvfragment-id=if-frag >Condition is true</p>
+          
+          
+  '
+---
+# name: test_dvf_view_initial
+  '
+  
+          
+          <p x-dvfragment-id=if-frag >Condition is false</p>
+          
+          
+  '
+---

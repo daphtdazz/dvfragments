@@ -1,6 +1,6 @@
 from django import template
-from django.template.base import FilterExpression, Parser
-from django.template.loader_tags import IncludeNode
+from django.template.exceptions import TemplateSyntaxError
+from django.template.loader_tags import Node
 
 from ..utils import add_fragment_id
 
@@ -8,17 +8,15 @@ from ..utils import add_fragment_id
 register = template.Library()
 
 
-class FragmentNode(IncludeNode):
-    def __init__(self, fragment_id, *, extra_context, isolated_context):
+class FragmentNode(Node):
+    def __init__(self, fragment_id, nodelist):
+        super().__init__()
         self.fragment_id = fragment_id
-
-        # template name is deferred
-        super().__init__(None, extra_context=extra_context, isolated_context=isolated_context)
+        self.nodelist = nodelist
 
     def render(self, context):
-        token = context['_dvfragments'][self.fragment_id]
-        self.template = FilterExpression(f'"{token}"', Parser(''))
-        rendered = super().render(context)
+        context['_dvviewclass'].fragment_nodes_by_name[self.fragment_id] = self
+        rendered = ''.join(node.render(context) for node in self.nodelist)
         rendered2 = add_fragment_id(rendered, self.fragment_id)
         return rendered2
 
@@ -38,27 +36,19 @@ def do_fragment(parser, token):
     bits = token.split_contents()
     if len(bits) < 2:
         raise TemplateSyntaxError(
-            "%r tag takes at least one argument: the name of the fragment to "
-            "be rendered." % bits[0]
+            "'fragment' tag takes at least one argument: the name of the fragment to be rendered."
         )
-    options = {}
-    remaining_bits = bits[2:]
-    while remaining_bits:
-        option = remaining_bits.pop(0)
-        if option in options:
-            raise TemplateSyntaxError('The %r option was specified more ' 'than once.' % option)
-        if option == 'with':
-            value = token_kwargs(remaining_bits, parser, support_legacy=False)
-            if not value:
-                raise TemplateSyntaxError(
-                    '"with" in %r tag needs at least ' 'one keyword argument.' % bits[0]
-                )
-        elif option == 'only':
-            value = True
-        else:
-            raise TemplateSyntaxError('Unknown argument for %r tag: %r.' % (bits[0], option))
-        options[option] = value
-    isolated_context = options.get('only', False)
-    namemap = options.get('with', {})
 
-    return FragmentNode(bits[1], extra_context=namemap, isolated_context=isolated_context)
+    if len(bits) > 2:
+        raise TemplateSyntaxError(
+            "The 'fragment' tag only takes one argument, the name. Was passed {', '.join(bits[1:])}"
+        )
+
+    fragment_name = bits[1]
+    if not fragment_name:
+        raise TemplateSyntaxError('Must provide a fragment name')
+
+    nodelist = parser.parse(('endfragment',))
+    parser.delete_first_token()
+
+    return FragmentNode(bits[1], nodelist)

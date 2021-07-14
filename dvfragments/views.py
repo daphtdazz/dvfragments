@@ -1,33 +1,25 @@
-from typing import Iterable, Tuple
+from typing import List, Tuple
 
-from django.conf import settings
+from django.template.base import Node
 from django.template.response import TemplateResponse
-
-from .utils import add_fragment_id
 
 
 URL_FRAGMENT_QUERY_KEY = 'fragment'
 
 
 class ConcatenatedTemplatesResponse(TemplateResponse):
-    """This is the same as TemplateResponse only instead of passing a list of strings for the
-    template arg of the constructor, you have to pass a List[List[str]] as we may need to render
-    multiple fragment templates."""
-    def __init__(self, templates_options: Iterable[Tuple[str, Iterable[str]]], **kwargs):
+    def __init__(self, names_nodes: List[Tuple[str, Node]], **kwargs):
         kwargs['template'] = None
         super().__init__(**kwargs)
-        self.templates_options = templates_options
+        self.names_nodes = names_nodes
 
     @property
     def rendered_content(self):
         context = self.resolve_context(self.context_data)
         contents = []
-        for fragment_id, template_names in self.templates_options:
-            template = self.resolve_template(template_names)
-            rendered = template.render(context, self._request)
-
-            rendered2 = add_fragment_id(rendered, fragment_id)
-            contents.append(rendered2)
+        for fragment_id, node in self.names_nodes:
+            rendered = node.render(context)
+            contents.append(rendered)
 
         return '\n'.join(contents)
 
@@ -35,10 +27,13 @@ class ConcatenatedTemplatesResponse(TemplateResponse):
 class FragmentableTemplateViewMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['_dvfragments'] = self.fragments
+        context['_dvviewclass'] = type(self)
         return context
 
     def render_to_response(self, context, **response_kwargs):
+        if not hasattr(type(self), 'fragment_nodes_by_name'):
+            type(self).fragment_nodes_by_name = {}
+
         # Cribbing from django.views.generic.base.TemplateResponseMixin
         response_kwargs.setdefault('content_type', self.content_type)
         fragments = self.request.GET.getlist(URL_FRAGMENT_QUERY_KEY)
@@ -46,8 +41,12 @@ class FragmentableTemplateViewMixin:
             return super().render_to_response(context, **response_kwargs)
 
         fragments = list(set(fragments))
+
+        if any(f not in self.fragment_nodes_by_name for f in fragments):
+            super().render_to_response(context, **response_kwargs).render()
+
         return ConcatenatedTemplatesResponse(
-            [(frag, [self.fragments[frag]]) for frag in fragments],
+            [(f, self.fragment_nodes_by_name[f]) for f in fragments],
             request=self.request,
             context=context,
             using=self.template_engine,

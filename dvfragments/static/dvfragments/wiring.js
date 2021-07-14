@@ -1,7 +1,6 @@
 window.reloadDVFragment = (name) => {
   function fragmentUpdater () {
     const ele = document.querySelector(`[x-dvfragment-id=${name}]`);
-    console.log(this.responseText);
     const parser = new DOMParser();
     const newDoc = parser.parseFromString(this.responseText, 'text/html');
     ele.replaceWith(newDoc.body.firstChild);
