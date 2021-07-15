@@ -25,7 +25,7 @@ class MyView(FragmentableTemplateViewMixin, TemplateView):
 <!doctype html>
 <html>
     <head>
-        <script src="{% static 'dvfragments/wiring.js' %}"></script>
+        <script src="{% static 'dvfragments/reloadDVFragment.js' %}"></script>
     </head>
     <body>
         {% fragment if-frag %}
@@ -45,4 +45,4 @@ Now say the view is mounted at `/myview`, If you do `GET /myview`, you will get 
 <p>Condition is false</p>
 ```
 
-Furthermore as a convenience, if you load the `dvfragments/wiring.js` file (as above), then the function `window.reloadDVFragment(<fragment name>)` is added which will asynchronously fetch the specified fragment and replace the DOM node of that fragment with the updated version. This allows you to e.g. poll for updates, or use websockets to be notified when backend data has changed, such that you should reload a given fragment.
+Furthermore as a convenience, if you load the `dvfragments/reloadDVFragment.js` file (as above), then the function `window.reloadDVFragment(<fragment name>)` is added which will asynchronously fetch the specified fragment and replace the DOM node of that fragment with the updated version. This allows you to e.g. poll for updates, or use websockets to be notified when backend data has changed, such that you should reload a given fragment.
