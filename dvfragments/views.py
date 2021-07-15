@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
 from django.template.base import Node
+from django.template.context import make_context
 from django.template.response import TemplateResponse
 
 
@@ -15,7 +16,13 @@ class ConcatenatedTemplatesResponse(TemplateResponse):
 
     @property
     def rendered_content(self):
-        context = self.resolve_context(self.context_data)
+        if len(self.names_nodes) == 0:
+            return ''
+        context_data = self.resolve_context(self.context_data)
+        # this is normally done by Template.render(), but we don't have a template and are rendering
+        # directly from nodes so have to do it ourselves.
+        engine = self.names_nodes[0][1].origin.loader.engine
+        context = make_context(context_data, self._request, autoescape=engine.autoescape)
         contents = []
         for fragment_id, node in self.names_nodes:
             rendered = node.render(context)

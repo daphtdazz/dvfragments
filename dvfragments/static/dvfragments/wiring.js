@@ -1,5 +1,10 @@
 window.reloadDVFragment = (name) => {
   function fragmentUpdater () {
+    if (this.status !== 200) {
+      console.warn(`Unable to update fragment '${name}': ${this.status} ${this.statusText}'`);
+      return;
+    }
+
     const ele = document.querySelector(`[x-dvfragment-id=${name}]`);
     const parser = new DOMParser();
     const newDoc = parser.parseFromString(this.responseText, 'text/html');

@@ -9,4 +9,5 @@ class View1(FragmentableTemplateViewMixin, TemplateView):
     def get_context_data(self, **kwargs):
         c = super().get_context_data(**kwargs)
         c['condition'] = self.request.GET.get('condition')
+        c['numeric_variable'] = 125
         return c
