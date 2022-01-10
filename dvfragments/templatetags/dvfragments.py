@@ -24,13 +24,13 @@ class FragmentNode(Node):
 @register.tag(name='fragment')
 def do_fragment(parser, token):
     """
-    Same arguments as for ``{% include %}`` except instead of passing a template path you pass
-    the name of the fragment. Otherwise behaviour basically the same as `include`.
+    Requires a single argument, the name of the fragment.
 
     Example::
 
-        {% include fragment-name %}
-        {% include fragment-name with bar="BAZZ!" baz="BING!" %}
+        {% fragment name %}
+        ...
+        {% endfragment %}
     """
     # Cribbed heavily from django.template.loader_tags.do_include
     bits = token.split_contents()
