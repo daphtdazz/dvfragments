@@ -1,8 +1,11 @@
 import json
 import logging
+from asgiref.sync import sync_to_async
 from asyncio import Task
 
 from channels.generic.websocket import AsyncWebsocketConsumer
+
+from fgame.models import GameUser
 
 from .notification_backend import get_backend
 
@@ -11,6 +14,14 @@ log = logging.getLogger(__name__)
 
 
 class DVFragmentChangeNotifyingConsumer(AsyncWebsocketConsumer):
+    @property
+    def key(self):
+        return self.scope['url_route']['kwargs'][self.view_class.pk_url_kwarg]
+
+    @property
+    def queue_name(self):
+        return self.view_class.notification_queue_name
+
     def __init__(self, view_class):
         super().__init__()
         self.view_class = view_class
@@ -22,15 +33,16 @@ class DVFragmentChangeNotifyingConsumer(AsyncWebsocketConsumer):
 
     async def accept(self, **kwargs):
         await super().accept(**kwargs)
-        key = self.scope['url_route']['kwargs'][self.view_class.pk_url_kwarg]
-
         backend = get_backend()
 
-        queue_name = self.view_class.notification_queue_name
-        await backend.subscribe(queue_name, key, self.handle_change)
-        await backend.notify(
-            queue_name, {'key': key, 'action': 'onpage', 'user': str(self.scope['user'].id)}
-        )
+        await backend.subscribe(self.queue_name, self.key, self.handle_change)
+        await sync_to_async(self._update_presence)(True)
 
-        # in order to get presence working: need to set presence on game user, then trigger
-        # fragment to reload.
+    async def disconnect(self, code):
+        await sync_to_async(self._update_presence)(False)
+        await get_backend().unsubscribe(self.queue_name, self.key, self.handle_change)
+
+    def _update_presence(self, present):
+        gu = GameUser.objects.get(game_id=self.key, user=self.scope['user'])
+        gu.connected = present
+        gu.save(update_fields=['connected'])

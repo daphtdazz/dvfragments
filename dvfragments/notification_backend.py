@@ -1,7 +1,7 @@
 import asyncio
 import atexit
 import logging
-from asyncio import FIRST_COMPLETED, Queue, Task, create_task, sleep, wait
+from asyncio import FIRST_COMPLETED, Queue, create_task, sleep, wait
 from queue import Queue as ThreadSafeQueue
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -108,11 +108,12 @@ class QueueBasedNotificationBackend(DVFragmentsNotificationBackend):
             create_task(queue.get(), name=f'Get next from queue {name}'): name
             for name, queue in self.queues.items()
         }
-        log.info('getting next notification from %s', tasks_to_name.keys())
+        log.info('getting next notification from %s', list(tasks_to_name.values()))
         done, _ = await wait(tasks_to_name.keys(), return_when=FIRST_COMPLETED)
-        log.info('Got a notification %s', done)
         assert len(done) == 1
         task = list(done)[0]
+        task_name = tasks_to_name[task]
+        log.info('Got a notification %s', task_name)
         return tasks_to_name[task], task.result()
 
     async def notify(self, queue_name, event):
@@ -149,7 +150,9 @@ class QueueBasedNotificationBackend(DVFragmentsNotificationBackend):
         self.internal_queue.put(STOP)
 
     def _get_next_internal_queue_item(self):
-        log.info('getting from internal queue %d', id(self.internal_queue),)
+        log.info(
+            'getting from internal queue %d', id(self.internal_queue),
+        )
         item = self.internal_queue.get()
         log.info('Got item from internal queue %s', item)
         return item
@@ -157,9 +160,7 @@ class QueueBasedNotificationBackend(DVFragmentsNotificationBackend):
     async def _monitor_internal_queue(self):
         loop = asyncio.get_running_loop()
         while True:
-            item = await loop.run_in_executor(
-                None, self._get_next_internal_queue_item
-            )
+            item = await loop.run_in_executor(None, self._get_next_internal_queue_item)
             if item is STOP:
                 break
             (queue_name, event) = item
